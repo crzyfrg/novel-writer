@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+      <title>Novel Writer Copilot</title>
+      <style>
+        .container {
+          display: flex;
+          flex-direction: column;
+          width: 80%;
+          margin: 20px auto;
+        }
+        .input-group {
+          display: flex;
+          flex-direction: column;
+          margin-bottom: 15px;
+        }
+        .input-group label {
+          margin-bottom: 5px;
+        }
+        .input-group textarea, .input-group input, .input-group select {
+          padding: 10px;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          font-size: 16px;
+          resize: none;
+          overflow: hidden;
+          min-height: 100px;
+        }
+        .input-group textarea {
+          height: auto;
+        }
+        .input-group textarea:focus, .input-group input:focus, .input-group select:focus {
+          outline: none;
+          border-color: #007bff;
+          box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+        }
+        .input-group textarea {
+          overflow-y: auto;
+        }
+        .input-group input[type="text"] {
+          min-height: 30px;
+        }
+        .input-group .select-container {
+          display: flex;
+          align-items: center;
+          width: 100%; /* Make the container take full width */
+        }
+        .input-group select {
+          min-height: 40px;
+          flex: 1; /* Make the select take remaining width */
+        }
+        .input-group .select-container button {
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 16px;
+          margin-left: 5px;
+          padding: 0;
+          color: #007bff;
+          display: flex;
+          align-items: center;
+        }
+        .input-group .select-container button:hover {
+          color: #0056b3;
+        }
+        button {
+          padding: 10px 15px;
+          background-color: #007bff;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 16px;
+          align-self: flex-start;
+        }
+        button:hover {
+          background-color: #0056b3;
+        }
+        #response {
+          margin-top: 20px;
+          padding: 10px;
+          border: 1px solid #eee;
+          border-radius: 4px;
+          white-space: pre-wrap;
+        }
+        .modal {
+          display: none;
+          position: fixed;
+          z-index: 1;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          overflow: auto;
+          background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+          background-color: #fefefe;
+          margin: 15% auto;
+          padding: 20px;
+          border: 1px solid #888;
+          width: 60%;
+          border-radius: 5px;
+        }
+        .close {
+          color: #aaa;
+          float: right;
+          font-size: 28px;
+          font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+          color: black;
+          text-decoration: none;
+          cursor: pointer;
+        }
+        .modal-input-group {
+          display: flex;
+          flex-direction: column;
+          margin-bottom: 15px;
+        }
+        .modal-input-group label {
+          margin-bottom: 5px;
+        }
+        .modal-input-group input, .modal-input-group textarea {
+          padding: 10px;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          font-size: 16px;
+          resize: none;
+          overflow: hidden;
+          min-height: 50px;
+        }
+        .modal-input-group textarea {
+          height: auto;
+        }
+        .modal-input-group textarea:focus, .modal-input-group input:focus {
+          outline: none;
+          border-color: #007bff;
+          box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+        }
+        .modal-input-group textarea {
+          overflow-y: auto;
+        }
+        .modal-buttons {
+          display: flex;
+          justify-content: flex-end;
+        }
+        .modal-buttons button {
+          margin-left: 10px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>Novel Writer Copilot</h1>
+        <div class="input-group">
+          <label for="apiKey">Gemini API Key:</label>
+          <input type="text" id="apiKey" placeholder="Enter your Gemini API key">
+        </div>
+        <div class="input-group">
+          <label for="persona">Select Persona:</label>
+          <div class="select-container">
+            <select id="persona"></select>
+            <button id="editPersonaBtn">&#9998;</button>
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="context">Context:</label>
+          <textarea id="context" rows="4" placeholder="Enter context"></textarea>
+        </div>
+        <div class="input-group">
+          <label for="prompt">Prompt:</label>
+          <textarea id="prompt" rows="4" placeholder="Enter prompt"></textarea>
+        </div>
+        <button id="generate">Generate Text</button>
+        <div id="response"></div>
+      </div>
+
+      <div id="personaModal" class="modal">
+        <div class="modal-content">
+          <span class="close">&times;</span>
+          <h2>Edit Persona</h2>
+          <div class="modal-input-group">
+            <label for="personaName">Persona Name:</label>
+            <input type="text" id="personaName" placeholder="Enter persona name">
+          </div>
+          <div class="modal-input-group">
+            <label for="personaDescription">Persona Description:</label>
+            <textarea id="personaDescription" rows="4" placeholder="Enter persona description"></textarea>
+          </div>
+          <div class="modal-buttons">
+            <button id="savePersonaBtn">Save</button>
+            <button id="cancelPersonaBtn">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        const modal = document.getElementById('personaModal');
+        const editPersonaBtn = document.getElementById('editPersonaBtn');
+        const closeBtn = document.querySelector('.close');
+        const savePersonaBtn = document.getElementById('savePersonaBtn');
+        const cancelPersonaBtn = document.getElementById('cancelPersonaBtn');
+        const personaNameInput = document.getElementById('personaName');
+        const personaDescriptionInput = document.getElementById('personaDescription');
+
+        editPersonaBtn.addEventListener('click', () => {
+          modal.style.display = 'block';
+        });
+
+        closeBtn.addEventListener('click', () => {
+          modal.style.display = 'none';
+        });
+
+        cancelPersonaBtn.addEventListener('click', () => {
+          modal.style.display = 'none';
+        });
+
+        savePersonaBtn.addEventListener('click', async () => {
+          const name = personaNameInput.value;
+          const description = personaDescriptionInput.value;
+
+          try {
+            const response = await fetch('http://localhost:3000/personas', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ name, description }),
+            });
+            if (!response.ok) {
+              throw new Error(\`HTTP error! status: ${response.status}\`);
+            }
+            fetchPersonas();
+            modal.style.display = 'none';
+          } catch (error) {
+            console.error('Failed to save persona:', error);
+          }
+        });
+
+        async function fetchPersonas() {
+          try {
+            const response = await fetch('http://localhost:3000/personas');
+            if (!response.ok) {
+              throw new Error(\`HTTP error! status: ${response.status}\`);
+            }
+            const personas = await response.json();
+            const personaSelect = document.getElementById('persona');
+            personaSelect.innerHTML = ''; // Clear existing options
+            personas.forEach(persona => {
+              const option = document.createElement('option');
+              option.value = persona.name;
+              option.text = persona.name;
+              personaSelect.appendChild(option);
+            });
+          } catch (error) {
+            console.error('Failed to fetch personas:', error);
+          }
+        }
+
+        document.getElementById('generate').addEventListener('click', async () => {
+          const apiKey = document.getElementById('apiKey').value;
+          const persona = document.getElementById('persona').value;
+          const context = document.getElementById('context').value;
+          const prompt = document.getElementById('prompt').value;
+
+          try {
+            const response = await fetch('http://localhost:3000/generate', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ apiKey, persona, context, prompt }),
+            });
+            if (!response.ok) {
+              throw new Error(\`HTTP error! status: ${response.status}\`);
+            }
+            const data = await response.json();
+            document.getElementById('response').innerText = data.response;
+          } catch (error) {
+             console.error('Failed to generate text:', error);
+             document.getElementById('response').innerText = 'Failed to generate text.';
+          }
+        });
+
+        fetchPersonas();
+      </script>
+    </body>
+    </html>

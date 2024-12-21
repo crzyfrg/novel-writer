@@ -1,0 +1,9 @@
+{
+      "name": "novel-writer-copilot",
+      "version": "1.0.0",
+      "description": "Word plugin for novel writing with Gemini Flash API",
+      "main": "server.js",
+      "scripts": {
+            "start": "node server.js"
+      }
+}
